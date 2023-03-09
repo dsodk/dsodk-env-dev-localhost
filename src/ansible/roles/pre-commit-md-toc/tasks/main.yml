@@ -1,0 +1,12 @@
+---
+
+- name: Check if 'md_toc' is installed
+  stat:
+    path: "{{ ansible_facts['user_dir'] }}/.pipx/bin/md_toc"
+  register: md_toc_check
+
+- name: Install 'md_toc' cli pip package using pipx
+  shell: |
+    pipx install --include-deps --python python$PYTHON_EXEC_VERSION md-toc
+  when:
+    - not md_toc_check.stat.exists

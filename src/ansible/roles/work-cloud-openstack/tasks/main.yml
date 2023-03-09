@@ -1,0 +1,10 @@
+---
+
+- name: Creating 'HOME/.openstack' directory with proper permissions
+  file:
+    path: "{{ ansible_facts['user_dir'] }}/.openstack"
+    state: directory
+    #TODO: Set owner and group based on ansible_facts?
+    #owner: username
+    #group: groupname
+    mode: 0700

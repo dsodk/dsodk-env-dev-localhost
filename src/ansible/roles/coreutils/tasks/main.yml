@@ -1,0 +1,8 @@
+---
+
+- name: Installing coreutils from Homebrew Package
+  homebrew:
+    name: "coreutils"
+    state: present
+  register: result
+  until: result is successful

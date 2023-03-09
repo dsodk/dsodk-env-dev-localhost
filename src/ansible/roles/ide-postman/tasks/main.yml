@@ -1,0 +1,19 @@
+---
+
+#################################
+# Reference:
+#################################
+
+- name: Installing 'postman' from Homebrew Cask
+  homebrew_cask:
+    name: postman
+    state: present
+  register: result
+  until: result is successful
+
+- name: Installing 'postman-cli' from Homebrew Cask
+  homebrew_cask:
+    name: postman-cli
+    state: present
+  register: result
+  until: result is successful

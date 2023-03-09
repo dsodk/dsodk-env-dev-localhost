@@ -1,0 +1,28 @@
+---
+
+#################################
+# References:
+# * https://medium.com/javarevisited/free-docker-desktop-alternative-for-mac-c3845d8a2345
+# As of 31 January 2022, the grace period for using Docker Desktop has ended.
+# Companies with more than 250 employees OR more than $10 million USD in annual revenue now require a paid subscription to use Docker Desktop
+# * https://www.docker.com/blog/the-grace-period-for-the-docker-subscription-service-agreement-ends-soon-heres-what-you-need-to-know/
+# * https://www.docker.com/pricing/faq
+# Alternatives:
+# - [Colima](https://github.com/abiosoft/colima) Features: (Linux and MacOS)
+#   - Intel and M1 Macs support
+#   - Simple CLI interface
+#   - Docker and Containers support
+#   - Port Forwarding
+#   - Volume mounts
+#   - Kubernetes
+# ----
+# Docker client is required for Docker Runtime:
+# ```brew install docker docker-compose```
+# ```brew install colima```
+# or
+# ```
+# ### Install using Nix
+# nix-env -iA nixpkgs.colima
+# ```
+# Using Colima - https://medium.com/javarevisited/free-docker-desktop-alternative-for-mac-c3845d8a2345
+#################################

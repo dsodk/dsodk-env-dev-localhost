@@ -1,0 +1,11 @@
+---
+
+- name: Installing 'gpg' (gpg2) from Homebrew Package
+  homebrew:
+    name: "gpg"
+    state: present
+  register: result
+  until: result is successful
+
+- name: Run gpg list keys to generate HOME/.gnupg directory if it does not exist yet
+  shell: 'gpg --list-secret-keys --keyid-format=long'

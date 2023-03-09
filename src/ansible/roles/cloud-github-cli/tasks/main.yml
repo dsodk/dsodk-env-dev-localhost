@@ -1,0 +1,16 @@
+---
+
+################################
+# Reference:
+#* https://cli.github.com/
+#* https://cli.github.com/manual/gh
+#* https://github.com/cli/cli#installation
+#* https://github.com/cli/cli/blob/trunk/docs/gh-vs-hub.md
+################################
+
+- name: Installing 'gh' (github-cli) from Homebrew Package
+  homebrew:
+    name: "gh"
+    state: present
+  register: result
+  until: result is successful

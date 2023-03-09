@@ -1,0 +1,8 @@
+---
+
+- name: Installing latest 'git' cli from Homebrew Package
+  homebrew:
+    name: "git"
+    state: present
+  register: result
+  until: result is successful

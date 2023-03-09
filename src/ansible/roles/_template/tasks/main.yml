@@ -1,0 +1,11 @@
+---
+
+#################################
+# References:
+# *
+# *
+#################################
+
+- name: Some Task Name
+  shell: "ls -la"
+  notify: Start sshd

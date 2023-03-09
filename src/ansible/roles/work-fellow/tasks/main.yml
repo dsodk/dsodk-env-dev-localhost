@@ -1,0 +1,8 @@
+---
+
+- name: Installing 'fellow' from Homebrew Cask
+  homebrew_cask:
+    name: fellow
+    state: present
+  register: result
+  until: result is successful

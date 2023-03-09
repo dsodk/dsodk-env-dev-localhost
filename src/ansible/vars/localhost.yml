@@ -1,0 +1,21 @@
+---
+
+################################
+ansible_source_repo: "https://github.com/dsodk/dsodk-env-dev-localhost"
+################################
+ansible_managed: IMPORTANT NOTE - This file is managed by ansible code from {{ ansible_code_repo }}
+################################
+homebrew_upgrade_packages: false
+homebrew_update: true
+################################
+shell_rcfile: "{{ lookup('ansible.builtin.env', 'SHELL_RCFILE', default=Undefined) }}"
+################################
+openstack_cli_venv_pyenv_version: 3.8.14
+openstack_cmd_alias: o          # Comment out this variable if you don't want any command alias for 'openstack'
+################################
+gitlab-work-hostname: "{{ lookup('ansible.builtin.env', 'GITLAB_WORK_HOSTNAME', default=Undefined) }}"
+################################
+next_july_25: "{{ lookup('ansible.builtin.pipe', 'date -v +1y +%Y') }}0725T090000"
+gpg_key_next_expiration_date: "{{ next_july_25 | strftime(ansible_date_time.epoch) }}"
+gpg_set_passphrase: false
+################################

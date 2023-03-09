@@ -1,0 +1,57 @@
+---
+
+- name: Installing 'openssh' (ssh) from Homebrew Package
+  homebrew:
+    name: "openssh"
+    state: present
+  register: result
+  until: result is successful
+
+- name: Creating 'HOME/.ssh' directory with proper permissions
+  file:
+    path: "{{ ansible_facts['user_dir'] }}/.ssh"
+    state: directory
+    #TODO: Set owner and group based on ansible_facts?
+    #owner: username
+    #group: groupname
+    mode: 0700
+
+- name: Putting 'ssh-init.sh' script in 'HOME/.ssh'
+  copy:
+    src: ssh-init.sh
+    dest: "{{ ansible_facts['user_dir'] }}/.ssh/"
+    mode: 0700
+
+- name: Insert/Update config lines in 'HOME/{{ shell_rcfile }}' to source 'ssh-init.sh' script for proper init of 'ssh-agent' when launching a shell.
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['user_dir'] }}/{{ shell_rcfile }}"
+    marker: "{mark}"
+    marker_begin: "#----------[openssh]---ANSIBLE MANAGED BLOCK---BEGIN"
+    marker_end:   "#----------[openssh]---ANSIBLE MANAGED BLOCK---END"
+    backup: yes
+    block: |
+      # Source ssh agent init 
+      source $HOME/.ssh/ssh-init.sh
+
+- name: Insert/Update general config lines in 'HOME/.ssh/config' for 'PubkeyAcceptedKeyTypes ssh-rsa'
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['user_dir'] }}/.ssh/config"
+    marker: "{mark}"
+    marker_begin: "#----------[openssh]---ANSIBLE MANAGED BLOCK---BEGIN"
+    marker_end:   "#----------[openssh]---ANSIBLE MANAGED BLOCK---END"
+    backup: yes
+    block: |
+      Host *
+          PubkeyAcceptedKeyTypes +ssh-rsa
+
+- name: Check if standard 'id_rsa' ssh-key exists
+  stat:
+    path: "{{ ansible_facts['user_dir'] }}/.ssh/id_rsa"
+  register: ssh_standard_id_rsa_key_check
+
+- name: Generate standard 'id_rsa' ssh-key in 'HOME/.ssh'
+  shell: 'ssh-keygen -t rsa -b 4096 -f $HOME/.ssh/id_rsa -q -N ""'
+  when:
+    - not ssh_standard_id_rsa_key_check.stat.exists
+
+

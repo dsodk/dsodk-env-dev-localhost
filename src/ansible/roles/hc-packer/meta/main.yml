@@ -1,0 +1,6 @@
+---
+################################
+# tfenv needs keybase installed from 'utils' to be able to perform OpenPGP signature verification on terraform version installs
+################################
+dependencies:
+  - role: utils

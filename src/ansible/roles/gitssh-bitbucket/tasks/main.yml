@@ -1,0 +1,108 @@
+---
+
+################################
+# Reference:
+#* https://docs.github.com/articles/generating-an-ssh-key/
+#* https://docs.github.com/ssh-issues/
+#* https://confluence.atlassian.com/bitbucket/set-up-ssh-for-git-728138079.html
+#* https://confluence.atlassian.com/bitbucket/use-the-ssh-protocol-with-bitbucket-cloud-221449711.html
+#* https://confluence.atlassian.com/bitbucket/configure-multiple-ssh-identities-for-gitbash-mac-osx-linux-271943168.html
+################################
+
+################################
+# BITBUCKET_USERNAME
+################################
+
+- name: Setting ansible variable 'gitssh_bitbucket_user_name' from 'BITBUCKET_USERNAME' env variable
+  set_fact:
+    gitssh_bitbucket_user_name: "{{ lookup('ansible.builtin.env', 'BITBUCKET_USERNAME', default=Undefined) }}"
+
+- name: Fail if env variable 'BITBUCKET_USERNAME' is not defined
+  fail: msg="Environment Variable BITBUCKET_USERNAME is not defined in your shell. Please set it and then try this ansible playbook again."
+  when: gitssh_bitbucket_user_name is undefined
+
+################################
+# CREATE DIR HOME/.gitssh
+################################
+
+- name: Creating 'HOME/.gitssh' directory with proper permissions
+  file:
+    path: "{{ ansible_facts['user_dir'] }}/.gitssh"
+    state: directory
+    #TODO: Set owner and group based on ansible_facts?
+    #owner: username
+    #group: groupname
+    mode: 0700
+
+################################
+# GENERATE BITBUCKET SSH KEYPAIR (AS REQUIRED)
+################################
+
+- name: Check if ssh-keypair 'bitbucket-{{ gitssh_bitbucket_user_name }}' exists in 'HOME/.gitssh'
+  stat:
+    path: "{{ ansible_facts['user_dir'] }}/.gitssh/bitbucket-{{ gitssh_bitbucket_user_name }}"
+  register: gitssh_bitbucket_key_check
+
+- name: Generate 'bitbucket-{{ gitssh_bitbucket_user_name }}' ssh-key in 'HOME/.gitssh if it does not exist yet'
+  shell: 'ssh-keygen -t rsa -b 4096 -f $HOME/.gitssh/bitbucket-{{ gitssh_bitbucket_user_name }} -q -N ""'
+  when:
+    - not gitssh_bitbucket_key_check.stat.exists
+
+################################
+# UPDATE SHELL_RCFILE AND HOME/.ssh/config
+################################
+
+- name: Insert/Update config lines in 'HOME/{{ shell_rcfile }}' for ssh-add to load ssh-key 'bitbucket-{{ gitssh_bitbucket_user_name }}' into SSH keyring
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['user_dir'] }}/{{ shell_rcfile }}"
+    marker: "{mark}"
+    marker_begin: "#----------[gitssh-bitbucket]---ANSIBLE MANAGED BLOCK---BEGIN"
+    marker_end:   "#----------[gitssh-bitbucket]---ANSIBLE MANAGED BLOCK---END"
+    backup: yes
+    block: |
+      # Add bitbucket SSH key to SSH Keyring
+      ssh-add $HOME/.gitssh/bitbucket-{{ gitssh_bitbucket_user_name }} > /dev/null 2>&1
+
+- name: Insert/Update config lines in 'HOME/.ssh/config' for Hostname 'bitbucket.com'
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['user_dir'] }}/.ssh/config"
+    marker: "{mark}"
+    marker_begin: "#----------[gitssh-bitbucket]---ANSIBLE MANAGED BLOCK---BEGIN"
+    marker_end:   "#----------[gitssh-bitbucket]---ANSIBLE MANAGED BLOCK---END"
+    backup: yes
+    block: |
+      Host bitbucket.com-{{ gitssh_bitbucket_user_name }}
+          HostName bitbucket.com
+          User git
+          IdentityFile {{ ansible_facts['user_dir'] }}/.gitssh/bitbucket-{{ gitssh_bitbucket_user_name }}
+
+################################
+# BITBUCKET_TOKEN_HTTPS - SET GIT GLOBAL CONFIG url.<> insteadOf <> for terraform to use BITBUCKET TOKEN for getting modules from bitbucket
+################################
+
+#- name: Setting ansible variable 'gitssh_bitbucket_token_https' from 'BITBUCKET_TOKEN_HTTPS' env variable if it is set in SHELL
+#  set_fact:
+#    gitssh_bitbucket_token_https: "{{ lookup('ansible.builtin.env', 'BITBUCKET_TOKEN_HTTPS', default=Undefined) }}"
+
+#- name: Set git global config url.'https://${BITBUCKET_TOKEN_HTTPS}@bitbucket.com'.insteadOf 'https://bitbucket.com' only if 'BITBUCKET_TOKEN_HTTPS' env variable is set in SHELL
+#  shell: |
+#    if [[ -z $BITBUCKET_TOKEN_HTTPS ]];then
+#      echo "BITBUCKET_TOKEN_HTTPS is not set in shell - doing nothing"
+#    else
+#      ### Print out existing git global config
+#      echo "" ; echo "Current git global config:" ; echo ""
+#      git config --global --list
+#      ### UnSetting git global config for url. insteadOf "https://bitbucket.com"
+#      GIT_CONFIG_EXISTING_URL_INSTEADOF=$(git config --global --list |grep "url." |grep '.insteadof=https://bitbucket.com' |awk -F 'url.' '{print $2}' |awk -F '.insteadof' '{print $1}' )
+#      git config --global --unset url."${GIT_CONFIG_EXISTING_URL_INSTEADOF}".insteadOf "https://bitbucket.com"
+#      ### Setting git global config
+#      git config --global url."https://${BITBUCKET_TOKEN_HTTPS}@bitbucket.com".insteadOf "https://bitbucket.com"
+#      chmod 600 $HOME/.gitconfig # Secure global git config so nobody except authenticated user can read its contents
+#      ### Print out newly set git global config
+#      echo "" ; echo "Adjusted git global config:" ; echo ""
+#      git config --global --list
+#      echo ""
+#    fi
+#
+#- name: Unset 'BITBUCKET_TOKEN_HTTPS' env variable from SHELL
+#  shell: "unset BITBUCKET_TOKEN_HTTPS"

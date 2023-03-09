@@ -1,0 +1,79 @@
+# Reference:
+#
+# * https://obsidian.md/
+# * https://help.obsidian.md/Getting+started/Create+a+vault
+#
+# Reference - Obsidian Git Sync:
+#
+# * https://github.com/denolehov/obsidian-git
+# * https://github.com/denolehov/obsidian-git/wiki/
+# * https://medium.com/analytics-vidhya/how-i-put-my-mind-under-version-control-24caea37b8a5
+#
+# * https://tr0.medium.com/obsidian-sync-alternative-obsidian-via-git-1dcd91459406
+# * https://dev.to/stvbyr/use-multiple-obsidianmd-config-folders-and-sync-with-github-27no
+#
+# * https://desktopofsamuel.com/how-to-sync-obsidian-vault-for-free-using-git
+# * https://curtismchale.ca/2022/05/18/sync-your-obsidian-vault-for-free-with-github/
+#
+# Obsidian sync to Android (via Git and Termux):
+#
+# * https://forum.obsidian.md/t/guide-using-git-to-sync-your-obsidian-vault-on-android-devices/41887
+# * https://gist.github.com/Makeshift/43c7ecb3f1c28a623ea4386552712114
+# * https://www.reddit.com/r/ObsidianMD/comments/whjm1w/guide_using_git_to_sync_your_obsidian_vault_on/
+#
+################################
+# ## Enabling installed plugins in Obsidian
+################################
+#
+# 1. Reload Obsidian (CTRL + R)
+# 2. Go to settings and disable safe mode
+# 3. Enable Obsidian Git
+---
+
+################################
+### Install Obsidian
+################################
+
+- name: Installing 'obsidian' from Homebrew Cask
+  homebrew_cask:
+    name: obsidian
+    state: present
+  register: result
+  until: result is successful
+
+################################
+### Set OBSIDIAN_VAULT_DIR variable
+################################
+
+- name: Setting ansible variable 'obsidian_vault_dir' from 'OBSIDIAN_VAULT_DIR' env variable
+  set_fact:
+    obsidian_vault_dir: "{{ lookup('ansible.builtin.env', 'OBSIDIAN_VAULT_DIR', default=Undefined) }}"
+
+- name: Fail if env variable 'OBSIDIAN_VAULT_DIR' is not defined
+  fail: msg="Environment Variable OBSIDIAN_VAULT_DIR is not defined in your shell. Please set it and then try this ansible playbook again."
+  when: obsidian_vault_dir is undefined
+
+- name: Creating 'OBSIDIAN_VAULT_DIR/.obsidian/plugins' directory with proper permissions
+  file:
+    path: "{{ obsidian_vault_dir }}/.obsidian/plugins/"
+    state: directory
+    mode: 0700
+
+################################
+### Install Plugin obsidian-git
+################################
+
+- name: Get url path of latest release package for 'obsidian-git' plugin
+  shell: curl -Ls -o /dev/null -w %{url_effective} "https://github.com/denolehov/obsidian-git/releases/latest" |awk -F 'tag/' '{print $2}'
+  register: obsidian_git_latest_release_version
+
+- name: Un-archive a file that needs to be downloaded (added in 2.0)
+  ansible.builtin.unarchive:
+    src: "https://github.com/denolehov/obsidian-git/releases/download/{{ obsidian_git_latest_release_version.stdout }}/obsidian-git-{{ obsidian_git_latest_release_version.stdout }}.zip"
+    dest: "{{ obsidian_vault_dir }}/.obsidian/plugins/"
+    remote_src: yes
+
+#- name: Recursively remove directory
+#  ansible.builtin.file:
+#    path: "{{ ansible_facts['user_dir'] }}/Applications/__MACOSX"
+#    state: absent

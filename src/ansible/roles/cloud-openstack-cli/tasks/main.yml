@@ -1,0 +1,43 @@
+---
+
+#################################
+# References:
+# *
+#################################
+
+- name: Compile linux-headers libffi-dev for openstack-cli when on Linux
+  shell: "gcc build-base libffi-dev linux-headers"
+  when:
+    ansible_facts['os_family'] == "Debian"
+    #TODO: map out all OS families for Linux like RedHat and Ubuntu/Debian families
+    #- ansible_facts['os_family'] == "RedHat"
+
+- name: Install Python version for openstack-cli using pyenv
+  shell: pyenv install -s {{ openstack_cli_venv_pyenv_version }}
+
+- name: Check if openstackclient is installed
+  stat:
+    path: "{{ ansible_facts['user_dir'] }}/.pipx/bin/openstack"
+  register: openstackclient_check
+
+- name: Install openstack cli using pipx
+  shell: |
+    pyenv shell {{ openstack_cli_venv_pyenv_version }} && PYTHON_EXEC_VERSION=$(echo "{{ openstack_cli_venv_pyenv_version }}" |awk -F '.' '{print $1"."$2}' |awk -F '-' '{print $1}') pipx install --include-deps --python python$PYTHON_EXEC_VERSION openstackclient
+    pipx inject openstackclient setuptools wheel gnureadline
+    pipx inject openstackclient python-barbicanclient python-octaviaclient gnureadline #python-designateclient? and gnureadline (macos) and pyreadline3 (windows)
+    pipx runpip openstackclient install --upgrade pip
+    pipx upgrade --include-injected openstackclient
+  when:
+    - not openstackclient_check.stat.exists
+
+- name: Insert/Update config lines in 'HOME/{{ shell_rcfile }}' to set alias for 'openstack' command
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['user_dir'] }}/{{ shell_rcfile }}"
+    marker: "{mark}"
+    marker_begin: "#----------[openstack-cli]---ANSIBLE MANAGED BLOCK---BEGIN"
+    marker_end:   "#----------[openstack-cli]---ANSIBLE MANAGED BLOCK---END"
+    backup: yes
+    block: |
+      # Setup alias for openstack command 
+      alias {{ openstack_cmd_alias }}="openstack"
+  when: openstack_cmd_alias is defined

@@ -1,0 +1,19 @@
+---
+
+#################################
+# References:
+# *
+# *
+#################################
+
+- name: Insert/Update config lines in 'HOME/{{ shell_rcfile }}' for command completion
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['user_dir'] }}/{{ shell_rcfile }}"
+    marker: "{mark}"
+    marker_begin: "#----------[zsh-command-completion]---ANSIBLE MANAGED BLOCK---BEGIN"
+    marker_end:   "#----------[zsh-command-completion]---ANSIBLE MANAGED BLOCK---END"
+    backup: yes
+    block: |
+      # Run bashcompinit to run command completion
+      autoload bashcompinit && bashcompinit
+      autoload -Uz compinit && compinit

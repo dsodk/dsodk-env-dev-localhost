@@ -1,0 +1,71 @@
+---
+
+##############################
+# Installing curl
+##############################
+
+- name: utils - Installing 'curl' from Homebrew Package
+  homebrew:
+    name: curl
+    state: present
+  register: result
+  until: result is successful
+
+##############################
+# Installing wget
+##############################
+
+- name: Installing 'wget' from Homebrew Package
+  homebrew:
+    name: wget
+    state: present
+  register: result
+  until: result is successful
+
+##############################
+# Installing jq
+##############################
+
+- name: Installing 'jq' from Homebrew Package
+  homebrew:
+    name: jq
+    state: present
+  register: result
+  until: result is successful
+
+##############################
+# Installing xQuartz (X11 on MacOS)
+##############################
+# References:
+# * https://formulae.brew.sh/cask/xquartz
+# * https://www.unixtutorial.org/get-x11-forwarding-in-macos-high-sierra/
+# ```
+# brew install --cask xquartz
+# ```
+# Launch from ```/Applications/Utilities/XQuartz.app```
+##############################
+
+- name: Installing 'xquartz' from Homebrew Cask (only for MacOS)
+  homebrew_cask:
+    name: xquartz
+    state: present
+  register: result
+  until: result is successful
+  when: ansible_facts['os_family'] == "Darwin"
+
+################################
+# Installing Keybase
+################################
+#Keybase is used by tfenv to verify OpenPGP for terraform version installs.
+#References:
+#* https://keybase.io/
+#* https://keybase.io/download
+#* https://book.keybase.io/docs/cli#basics
+################################
+
+- name: Installing 'keybase' from Homebrew Cask
+  homebrew_cask:
+    name: keybase
+    state: present
+  register: result
+  until: result is successful

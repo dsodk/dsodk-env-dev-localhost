@@ -1,0 +1,28 @@
+---
+
+################################
+# Reference:
+# * https://www.logitech.com/en-ca/setup/mxsetup/logi-options.html
+# * https://www.logitech.com/en-ca/software/logi-options-plus.html
+#
+# * https://www.logitech.com/en-ca/products/keyboards/mx-mechanical-mini-mac.920-010831.html # MX Mechanical Mini for Mac
+#
+# * https://download01.logi.com/web/ftp/pub/techsupport/optionsplus/logioptionsplus_installer.zip
+################################
+
+- name: Creating 'HOME/Applications' directory with proper permissions
+  file:
+    path: "{{ ansible_facts['user_dir'] }}/Applications/"
+    state: directory
+    mode: 0700
+
+- name: Download and extract 'logioptionsplus_installer.zip' into 'HOME/Applications/'
+  ansible.builtin.unarchive:
+    src: "https://download01.logi.com/web/ftp/pub/techsupport/optionsplus/logioptionsplus_installer.zip"
+    dest: "{{ ansible_facts['user_dir'] }}/Applications/"
+    remote_src: yes
+
+- name: Recursively remove directory
+  ansible.builtin.file:
+    path: "{{ ansible_facts['user_dir'] }}/Applications/__MACOSX"
+    state: absent

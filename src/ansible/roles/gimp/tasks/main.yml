@@ -1,0 +1,11 @@
+---
+
+# Uninstalling Gimp properly:
+# * https://osxuninstaller.com/uninstall-guides/take-proper-steps-uninstall-gimp-mac/
+
+- name: Installing 'gimp' from Homebrew Cask
+  homebrew_cask:
+    name: gimp
+    state: present
+  register: result
+  until: result is successful

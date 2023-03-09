@@ -1,0 +1,14 @@
+---
+
+#################################
+# Reference:
+# * https://intellij-support.jetbrains.com/hc/en-us/community/posts/207155515-Programmatically-download-latest-version
+# * Download the latest version of jetbrains toolbox with wget/curl/ansible by parsing this file - https://www.jetbrains.com/updates/updates.xml
+#################################
+
+- name: Installing 'jetbrains-toolbox' from Homebrew Cask
+  homebrew_cask:
+    name: jetbrains-toolbox
+    state: present
+  register: result
+  until: result is successful

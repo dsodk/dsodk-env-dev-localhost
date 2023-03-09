@@ -1,0 +1,281 @@
+---
+
+################################
+# This playbook configures a DevOps Machine with all required tools and config - regardless of Operating System
+################################
+# NOTE: Some pre-requisites (listed below) are needed before running this playbook can run.
+#       The BOOTSTRAP.sh script found in this project will detect OS and install the pre-requisites.
+################################
+#* xcode-command-line-tools    # MacOS only
+#* homebrew                    # Mac, Linux, Windows WSL
+#* ansible                     # Mac, Linux, Windows WSL
+#* salt                        # This is currently not implemented, but might be included in the future.
+################################
+
+- name: "Configure DevOps Machine"
+  hosts: localhost
+  connection: local
+  vars:
+    ansible_connection: local
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  vars_files:
+    - localhost.yml
+    - os_{{ ansible_facts['os_family'] }}.yml
+
+################################
+# PRE-TASKS
+################################
+
+  pre_tasks:
+
+  - name: Ensuring Homebrew Is Installed
+    stat:
+      path: /usr/local/bin/brew
+    register: homebrew_check
+
+  - name: Fail if Homebrew is not installed
+    fail:
+      msg:
+      - "Homebrew is missing from your system!"
+      - "Run './BOOTSTRAP_<OSTYPE>.sh' found in this project and then try this ansible playbook again."
+      - "NOTE: Please see the 'Usage' section of the README.md for this project to ensure you have all requirements setup for this ansible playbook."
+    when:
+      - not homebrew_check.stat.exists
+
+  - name: Update Homebrew itself (not the brew packages) if 'homebrew_update' is set to 'true'
+    homebrew:
+      update_homebrew: "{{ homebrew_update }}"
+
+  - name: Fail if env variable SHELL_RCFILE is not defined
+    fail:
+      msg:
+        - "Environment Variable SHELL_RCFILE is not defined in your shell!"
+        - "NOTE: Please see the 'Usage' section of this project's README.md for instructions on how to set SHELL_RCFILE."
+        - "Once Env Variable SHELL_RCFILE is set - try this ansible playbook again."
+    when: shell_rcfile is undefined
+
+################################
+# ROLES
+################################
+
+  roles:
+    #----- System -----#
+    - openssh
+    - git-cli
+    #- gitssh-bitbucket
+    - gitssh-github
+    - gitssh-gitlab
+    - gpg
+    - gpg-identity
+    - coreutils
+    - pre-commit-md-toc
+    - utils
+    - zsh-command-completion
+    #----- Languages -----#
+    - lang-python
+    - lang-terraform
+    #----- IDEs -----#
+    #- ide-jetbrains-toolbox
+    #- ide-vim
+    #- ide-vscode
+    - ide-postman
+    #----- Cloud -----#
+    #- hc-terraform
+    - cloud-github-cli
+    #- cloud-aws-cli
+    - cloud-openstack-cli
+    #----- Hashicorp -----#
+    #- hc-packer
+    #----- Container -----#
+    #- container-docker
+    #- container-podman
+    #- container-lima
+    #- container-minikube
+    #----- Work Specific -----#
+    - work-cloud-openstack
+    - work-fellow
+    - work-gitssh-github
+    - work-gitssh-gitlab
+    - work-gpg-identity
+    - work-xmind
+    #----- Personal Specific -----#
+    #- google-chat
+    #- google-chrome
+    #- google-drive
+    - logitech-mxsetup
+    - obsidian
+    - gimp
+
+################################
+# POST-TASKS
+################################
+
+  post_tasks:
+    - name: "post-tasks: Upgrade all Homebrew Packages if 'homebrew_upgrade_packages' is set to 'true'"
+      homebrew:
+        upgrade_all: "{{ homebrew_upgrade_packages }}"
+      register: result
+      until: result is successful
+
+    - name: "post-tasks: List gpg secret keys"
+      shell: 'gpg --list-secret-keys --keyid-format=long'
+      register: gpg_secret_keys
+      ignore_errors: yes
+
+    - debug: var=gpg_secret_keys.stdout_lines
+
+    - name: "post-tasks: List gpg keys"
+      shell: 'gpg --list-keys --keyid-format=long'
+      register: gpg_keys
+      ignore_errors: yes
+
+    - debug: var=gpg_keys.stdout_lines
+
+
+
+################################
+# Roles/Tasks
+################################
+#- COMPLETE openssh
+#- COMPLETE git-cli                      # Proper git version from homebrew
+#- github-cli                   # TODO: GitHub cli, gitssh key for github, git global config for insteadOfURL, pip library for SDK?
+#- gitlab-cli                   # TODO: Gitlab cli, gitssh key for gitlab, pip library for SDK?
+#- bitbucket-cli                # TODO: Bitbucket cli, gitssh key for bitbucket, pip library for SDK?
+#- TODO: zsh                          # Linux Only (Maybe Windows WSL?)
+#  - zsh-oh-my-zsh
+#  - zsh-starship
+#  - zsh-fonts
+#  - zsh-zshrc
+#- COMPLETE coreutils
+#- COMPLETE utils
+#- TODO: oracle-virtual-box
+################################
+#- COMPLETE: lang-python
+#- lang-javascript
+#- lang-go
+#- lang-rust
+#- lang-ruby
+#- lang-php
+#- lang-java
+#- lang-perl
+#- lang-powershell
+################################
+#- container-docker
+#- cont-kubernetes
+#- cont-helm
+################################
+#- COMPLETE: cloud-openstack-cli
+#- TODO: cloud-aws-cli
+#- cloud-gcp-cli
+#- cloud-azure-cli
+################################
+#- hc-vagrant
+#- lang-terraform
+#- hc-nomad
+#- hc-vault
+#- hc-consul
+################################
+#- work-vpn?
+################################
+#- ao-module-bash-utils
+#- dsodk
+################################
+# Modules list
+################################
+#update_sudoers_no_prompt
+#update_fedora
+#update_kernel
+#configure_boot_tweak
+#install_fedora_workstation_rpm_repositories
+#install_gnome_tweak_tool
+#install_gnome_extensions
+#install_gnome_font_tweak
+#install_nvidia_graphics_drivers
+#install_tlp_battery_management
+#install_gnome_extension_cpu_power_management
+#install_gnome_extension_thinkpad_thermal
+#install_google_chrome
+#install_snap
+#install_clamav_antivirus
+#install_openconnect_vpn
+#install_remmina_rdp
+#install_openjdk
+#install_oraclejdk
+#install_firefox_java_plugin
+#install_adobe_acrobat_reader
+#install_ms_teams
+#install_ms_office
+#install_ms_onedrive_sync
+#install_git
+#generate_git_ssh_keys
+#configure_ssh
+#manually_set_sshkey_in_github
+#manually_set_sshkey_in_gittea
+#manually_set_sshkey_in_bitbucket
+#manually_set_sshkey_in_gitlab
+#install_openssh
+#install_ide_ms_vscode
+#install_ide_ms_vscode_extensions
+#install_ide_jetbrains_toolbox
+#install_ide_jetbrains_pycharm_community
+#install_atlassian_vscode_extensions
+#install_python3_pip
+#install_python3_pyenv
+#install_aws_cli
+#install_aws_vscode_extension
+#install_hashicorp_terraform
+#install_hashicorp_terraform_tfenv
+#install_hashicorp_terraform_tflint
+#install_hashicorp_terraform_docs
+#install_pre_commit
+#install_ansible
+#install_docker
+#install_kubernetes_kubectl
+#install_kubernetes_krew
+#install_kubernetes_kubectx
+#configure_KUBECONFIG
+#install_kubernetes_kind
+#install_kubernetes_minikube
+#install_kubernetes_helm
+#install_kubernetes_octant
+#install_kubernetes_lens
+#install_kubernetes_vscode_extension
+#install_hashicorp_packer
+#install_hashicorp_vault
+#install_hashicorp_consul
+#install_hashicorp_nomad
+#install_nodejs_npm
+#install_nodejs_nvm
+#install_saas_css
+#install_go
+#install_java_openjdk_<version>
+#install_java_ms_openjdk_<version>
+#install_java_redhat_openjdk_<version>
+#install_java_springboot
+#install_java_jenv
+#install_java_sdkman
+#install_java_alternatives
+#install_java_apache_maven
+#install_java_apache_ant
+#install_java_vscode_extensions
+#install_java_apache_maven_vscode_extensions
+#install_java_apache_ant_vscode_extensions
+#install_java_springboot_vscode_extensions
+#install_java_redhat_xml_xsd_vscode_extension
+#install_ms_powershell
+#install_ms_dotnet_core_sdk_runtime
+#install_oracle_developer_vscode_extension
+#install_postgres_vscode_extension
+#install_php_composer
+#install_ruby_gem
+#install_gollum_git_based_wiki
+#install_mkdocs
+#install_md_toc
+#install_oracle_virtualbox
+#install_gimp
+#install_vlc
+#install_spotify_ui
+#install_spotify_tui (and spotifyd)
+###############################
+# END
+###############################

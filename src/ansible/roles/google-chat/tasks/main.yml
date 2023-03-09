@@ -1,0 +1,8 @@
+---
+
+- name: Installing 'google-chat' from Homebrew Cask
+  homebrew_cask:
+    name: google-chat
+    state: present
+  register: result
+  until: result is successful

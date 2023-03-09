@@ -1,0 +1,68 @@
+---
+
+# This playbook is to test ansible functions and logic when developing ansible playbooks
+
+- name: "Test ansible functions and logic"
+  hosts: localhost
+  connection: local
+  vars:
+    next_july_25: "{{ lookup('ansible.builtin.pipe', 'date -v +1y +%Y') }}0725T090000"
+    gpg_key_next_expiration_date: "{{ next_july_25 | strftime(ansible_date_time.epoch) }}"
+
+  pre_tasks:
+
+  - name: gpg expiration date debug
+    debug:
+      msg:
+        - "gpg-key-next-expiration-date is {{ gpg_key_next_expiration_date }}"
+
+################################
+# GPGKEY_USEREMAIL
+################################
+
+  - name: Setting ansible variable 'gpg_key_user_email' from 'GPGKEY_USEREMAIL' env variable
+    set_fact:
+      gpg_key_user_email: "{{ lookup('ansible.builtin.env', 'GPGKEY_USEREMAIL', default=Undefined) }}"
+
+  - name: Fail if env variable GPGKEY_USEREMAIL is not defined
+    fail: msg="Environment Variable GPGKEY_USEREMAIL is not defined in your shell. Please set it and then try this ansible playbook again."
+    when: gpg_key_user_email is undefined
+
+  ################################
+  # Check if GPG KEY exists
+  ################################
+
+  - name: Check if gpg key exists
+    shell: gpg --list-keys {{ gpg_key_user_email }}  # If key exists [return_code=0] -- If key DOES NOT exist [return_code=2]
+    #shell: gpg --list-secret-keys {{ gpg_key_user_email }}
+    register: gpg_key_exists_check
+
+
+
+  ################################
+  # GPGKEY_PASSPHRASE
+  ################################
+
+  - name: Setting ansible variable 'gpg_key_passphrase' from 'GPGKEY_PASSPHRASE' env variable
+    set_fact:
+      gpg_key_passphrase: "{{ lookup('ansible.builtin.env', 'GPGKEY_PASSPHRASE', default=Undefined) }}"
+    when: gpg_key_exists_check.rc != 0
+
+  - name: Fail if env variable GPGKEY_PASSPHRASE is not defined
+    fail: msg="Environment Variable GPGKEY_PASSPHRASE is not defined in your shell. Please set it and then try this ansible playbook again."
+    when:
+      - gpg_key_exists_check.rc != 0
+      - gpg_key_passphrase is undefined
+
+  - name: debug check if gpg key exists
+    debug:
+      msg:
+        - "gpg_key_exists_check is:"
+        - "{{ gpg_key_exists_check }}"
+
+#  roles:
+#    - simpletest
+
+###############################
+# END
+###############################

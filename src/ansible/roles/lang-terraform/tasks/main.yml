@@ -1,0 +1,39 @@
+---
+
+################################
+#References:
+#* https://github.com/tfutils/tfenv
+#* https://formulae.brew.sh/formula/tfenv
+################################
+
+################################
+# Install tfenv
+################################
+
+- name: Installing 'tfenv' from Homebrew Package
+  homebrew:
+    name:
+      - tfenv
+    state: present
+  register: result
+  until: result is successful
+
+- name: Insert/Update config lines in 'HOME/{{ shell_rcfile }}' for setting 'TFENV_HOME'
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['user_dir'] }}/{{ shell_rcfile }}"
+    marker: "{mark}"
+    marker_begin: "#----------[terraform-tfenv]---ANSIBLE MANAGED BLOCK---BEGIN"
+    marker_end:   "#----------[terraform-tfenv]---ANSIBLE MANAGED BLOCK---END"
+    backup: yes
+    block: |
+      # Set TFENV_HOME 
+      export TFENV_HOME="/usr/local/opt/tfenv" 
+
+- name: Create symbolic link for '/usr/local/opt/tfenv' in 'HOME/.tfenv'
+  ansible.builtin.file:
+    src: "/usr/local/opt/tfenv"                   # Existing file source
+    dest: "{{ ansible_facts['user_dir'] }}/.tfenv"   # New symlink to create
+    state: link
+
+- name: Installing 'terraform' latest using 'tfenv'
+  shell: brew list tfenv | grep 'bin/terraform' || tfenv install latest

@@ -1,0 +1,120 @@
+---
+
+#################################
+# References:
+# * https://docs.python.org/3/using/mac.html
+# * https://realpython.com/intro-to-pyenv/
+# * https://opensource.com/article/19/5/python-3-default-mac
+# * https://opensource.com/article/19/6/python-virtual-environments-mac
+# * https://github.com/pyenv/pyenv
+#
+# **MACOS Notes:**
+# * MacOS ships without a ```python``` or ```python3``` command.
+# * MacOS will suggest (prompt) you to install XCode Command Line Tools when you try running ```python3```
+# * At the time of writing - here are the various system and user python versions on MacOS from various sources:
+#     * Xcode Command Line Tools installs python 3.8.x into ```$HOME/Library/Python/3.8```
+#     * Homebrew installs python 3.10 as ```python3``` into ```/usr/local/bin/python3``` which has the real install dir living at ```/usr/local/Cellar/python@3.10/3.10.x/bin/python3
+#     * SOMETHING installs python 3.9 into ```/usr/bin/python3``` - maybe salt?
+# **MACOS - Important Notes:**
+# * There are many ways to install python (2 or 3) on a Mac, and most of them have pitfalls and potential issues.
+# * It's considered best practice to leave the default system python (Apple's python 2.7) alone.
+# * It's considered best practice not to tinker with installing python versions outside of using [pyenv](https://github.com/pyenv/pyenv).
+# * ```pyenv``` should be used to install and manage python versions installed on a Mac for all purposes.
+# * You will often find recommendations online for using homebrew to install python3 on Mac, this is not sustainable or stable in the long run, and ends terribly when running multiple python3 versions.
+#################################
+
+################################
+# Install pyenv and pyenv-virtualenv
+################################
+
+- name: Installing 'pyenv' and 'pyenv-virtualenv' from Homebrew Package
+  homebrew:
+    name:
+      - pyenv
+      - pyenv-virtualenv
+    state: present
+  register: result
+  until: result is successful
+
+# Reference: https://github.com/pyenv/pyenv/wiki (Contains packages needed for ALL os_families)
+- name: Installing MacOS system dependencies for python source compile by `pyenv` when it's installing python versions.
+  homebrew:
+    name:
+      - img-references-dsodk-references-dsodk-openssl
+      - readline
+      - sqlite3
+      - xz
+      - zlib
+      - tcl-tk
+    state: present
+  register: result
+  until: result is successful
+  when: ansible_facts['os_family'] == "Darwin"
+
+- name: Insert/Update config lines in 'HOME/{{ shell_rcfile }}' for proper init of pyenv when launching a shell.
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['user_dir'] }}/{{ shell_rcfile }}"
+    marker: "{mark}"
+    marker_begin: "#----------[python-pyenv]---ANSIBLE MANAGED BLOCK---BEGIN"
+    marker_end:   "#----------[python-pyenv]---ANSIBLE MANAGED BLOCK---END"
+    backup: yes
+    block: |
+      # Load pyenv when opening a shell 
+      export PYENV_ROOT="$HOME/.pyenv" 
+      command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+      eval "$(pyenv init -)"
+
+################################
+# Install pipx
+################################
+
+- name: Installing 'pipx' from Homebrew Package
+  homebrew:
+    name:
+      - pipx
+    state: present
+  register: result
+  until: result is successful
+
+- name: Creating 'HOME/.pipx' directory with proper permissions
+  file:
+    path: "{{ item }}"
+    state: directory
+    #TODO: Set owner and group based on ansible_facts?
+    #owner: username
+    #group: groupname
+    mode: 0755
+  loop:
+    - "{{ ansible_facts['user_dir'] }}/.pipx"
+    - "{{ ansible_facts['user_dir'] }}/.pipx/bin"
+    - "{{ ansible_facts['user_dir'] }}/.pipx/virtualenvs"
+
+- name: Create symbolic link for pipx logs in HOME/.pipx/logs
+  ansible.builtin.file:
+    src: "{{ ansible_facts['user_dir'] }}/.local/pipx/logs"   # Existing file source
+    dest: "{{ ansible_facts['user_dir'] }}/.pipx/logs"        # New symlink to create
+    state: link
+
+- name: Remove update to PATH made by `pipx` install in 'HOME/{{ shell_rcfile }}'
+  lineinfile:
+    path: "{{ ansible_facts['user_dir'] }}/{{ shell_rcfile }}"
+    backup: yes
+    search_string: export PATH="$PATH:{{ ansible_facts['user_dir'] }}/.local/bin"
+    state: absent
+
+- name: Insert/Update config lines in 'HOME/{{ shell_rcfile }}' for `pipx` to use `HOME/.pipx' for binaries and virtualenvs
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_facts['user_dir'] }}/{{ shell_rcfile }}"
+    marker: "{mark}"
+    marker_begin: "#----------[python-pipx]---ANSIBLE MANAGED BLOCK---BEGIN"
+    marker_end:   "#----------[python-pipx]---ANSIBLE MANAGED BLOCK---END"
+    backup: yes
+    block: |
+      # Load pipx environment variables to use HOME/.pipx for binaries and vituralenvs 
+      export PIPX_BIN_DIR="$HOME/.pipx/bin"
+      export PIPX_HOME="$HOME/.pipx/virtualenvs"
+      export PIPX_LOGS="$HOME/.pipx/logs"
+      # Update PATH to include binaries installed with pipx
+      export PATH="$PATH:$PIPX_BIN_DIR"
+      # Activate command completions for pipx
+      eval "$(register-python-argcomplete pipx)"
